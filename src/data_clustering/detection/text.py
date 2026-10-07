@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import re
 import string
+from collections import Counter
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import pandas as pd
 
@@ -21,6 +22,9 @@ class TextColumnProfile:
     unique_ratio: float
     empty_ratio: float
     language_like_score: float
+    average_word_count: float
+    lexical_diversity: float
+    keywords: List[Tuple[str, int]] = field(default_factory=list)
     reasons: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -32,6 +36,9 @@ class TextColumnProfile:
             "unique_ratio": round(self.unique_ratio, 4),
             "empty_ratio": round(self.empty_ratio, 4),
             "language_like_score": round(self.language_like_score, 4),
+            "average_word_count": round(self.average_word_count, 4),
+            "lexical_diversity": round(self.lexical_diversity, 4),
+            "keywords": self.keywords,
             "reasons": self.reasons,
         }
 
@@ -87,6 +94,22 @@ def analyze_text_column(series: pd.Series, *, min_string_ratio: float = 0.7, min
     average_text_length = float(string_values.map(len).mean()) if not string_values.empty else 0.0
     unique_ratio = _safe_ratio(string_values.nunique(dropna=True), len(string_values)) if len(string_values) else 0.0
     language_like_score = _language_like_score(string_values)
+    words_by_row = [
+        re.findall(r"\b[^\W\d_][\w'-]{2,}\b", value.lower(), flags=re.UNICODE)
+        for value in string_values
+    ]
+    word_counts = [len(words) for words in words_by_row]
+    all_words = [word for words in words_by_row for word in words]
+    stop_words = {
+        "about", "after", "again", "also", "and", "are", "but", "can", "for",
+        "from", "has", "have", "into", "its", "more", "not", "our", "out",
+        "over", "that", "the", "their", "then", "there", "these", "this",
+        "was", "were", "will", "with", "you",
+    }
+    keywords = [
+        (word, count)
+        for word, count in Counter(word for word in all_words if word not in stop_words).most_common(10)
+    ]
 
     reasons: List[str] = []
     if string_ratio < min_string_ratio:
@@ -113,6 +136,9 @@ def analyze_text_column(series: pd.Series, *, min_string_ratio: float = 0.7, min
         unique_ratio=unique_ratio,
         empty_ratio=empty_ratio,
         language_like_score=language_like_score,
+        average_word_count=float(sum(word_counts) / len(word_counts)) if word_counts else 0.0,
+        lexical_diversity=_safe_ratio(len(set(all_words)), len(all_words)),
+        keywords=keywords,
         reasons=reasons,
     )
 
