@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "data-clustering"
+version = "0.1.0"
+description = "Data type detection utilities for clustering workflows."
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "Pillow>=10.0.0",
+    "openpyxl>=3.1.0",
+    "xlrd>=2.0.0",
+    "pyarrow>=18.0.0",
+]
+
+[project.optional-dependencies]
+frontend = ["streamlit>=1.40.0"]
+
+[project.scripts]
+data-clustering = "data_clustering.cli:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
