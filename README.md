@@ -5,8 +5,18 @@ This package profiles tabular and multimedia inputs and returns data characteris
 ## Install
 
 ```bash
-py -3 -m pip install -e .
+py -3 -m pip install -e ".[frontend]"
 ```
+
+## Start the frontend
+
+From the repository root, run:
+
+```bash
+py -3 -m streamlit run app.py
+```
+
+The browser UI accepts supported tabular and individual media files, displays detected characteristics and recommendations, and lets you download the report as JSON. Uploaded content is written to a temporary directory for analysis and removed when analysis finishes.
 
 ## Analyze a file
 

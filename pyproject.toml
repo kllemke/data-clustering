@@ -16,6 +16,9 @@ dependencies = [
     "pyarrow>=18.0.0",
 ]
 
+[project.optional-dependencies]
+frontend = ["streamlit>=1.40.0"]
+
 [project.scripts]
 data-clustering = "data_clustering.cli:main"
 
