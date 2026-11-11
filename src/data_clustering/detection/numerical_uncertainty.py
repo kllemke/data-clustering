@@ -8,6 +8,8 @@ from typing import Any, Dict, List, Tuple
 
 import pandas as pd
 
+from .column_types import classify_column
+
 
 @dataclass
 class UncertaintyProfile:
@@ -20,7 +22,9 @@ class UncertaintyProfile:
         return asdict(self)
 
 
-def analyze_uncertainty(dataframe: pd.DataFrame) -> UncertaintyProfile:
+def analyze_uncertainty(
+    dataframe: pd.DataFrame, *, missing_ratios: Dict[str, float] | None = None
+) -> UncertaintyProfile:
     """Find confidence-like fields, interval bounds, numeric spread, and missingness."""
     confidence_pattern = re.compile(r"confidence|probability|certainty|score|_prob$", re.IGNORECASE)
     lower_pattern = re.compile(r"^(.*?)(?:_lower|_low|_min|_lcl)$", re.IGNORECASE)
@@ -34,7 +38,10 @@ def analyze_uncertainty(dataframe: pd.DataFrame) -> UncertaintyProfile:
     for column in dataframe.columns:
         name = str(column)
         series = dataframe[column]
-        missing[name] = float(series.isna().mean()) if len(series) else 0.0
+        missing[name] = (
+            missing_ratios[name] if missing_ratios is not None
+            else float(series.isna().mean()) if len(series) else 0.0
+        )
         if confidence_pattern.search(name):
             confidence_columns.append(name)
         lower = lower_pattern.match(name)
@@ -44,7 +51,7 @@ def analyze_uncertainty(dataframe: pd.DataFrame) -> UncertaintyProfile:
         if upper:
             upper_bounds[upper.group(1).lower()] = name
 
-        if pd.api.types.is_datetime64_any_dtype(series):
+        if classify_column(series) != "numerical":
             continue
         numeric = pd.to_numeric(series, errors="coerce").dropna()
         if len(numeric) >= 2:

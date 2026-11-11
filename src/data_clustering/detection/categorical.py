@@ -7,7 +7,7 @@ from typing import Any, Dict, Iterable, List
 
 import pandas as pd
 
-from .time_series import analyze_time_series_column
+from .column_types import classify_column
 
 
 @dataclass
@@ -21,6 +21,7 @@ class CategoricalColumnProfile:
     frequencies: Dict[str, int]
     is_hierarchical: bool
     hierarchy_separator: str | None
+    low_cardinality_numeric: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -36,7 +37,12 @@ def analyze_categorical_column(
     values = series.dropna().astype(str)
     cardinality = int(values.nunique())
     ratio = cardinality / len(values) if len(values) else 0.0
-    inferred_order = _infer_ordinal_order(series) if ordinal_order is None else None
+    kind = classify_column(series)
+    inferred_order = (
+        _infer_ordinal_order(series)
+        if ordinal_order is None and kind in {"categorical", "boolean"}
+        else None
+    )
     category_type = "ordinal" if ordinal_order is not None or inferred_order is not None else "nominal"
     hierarchy_separator = next(
         (separator for separator in ("/", ">", "|", "\\") if values.str.contains(separator, regex=False).any()),
@@ -52,20 +58,7 @@ def analyze_categorical_column(
     if inferred_order is not None:
         category_type = "ordinal"
 
-    average_length = float(values.str.len().mean()) if len(values) else 0.0
-    is_datetime = analyze_time_series_column(series).is_datetime_like
-    is_categorical = bool(
-        len(values) > 0
-        and not is_datetime
-        and (
-            (pd.api.types.is_numeric_dtype(series) and ratio <= max_cardinality_ratio)
-            or (
-                not pd.api.types.is_numeric_dtype(series)
-                and cardinality <= max(5, int(len(values) * max_cardinality_ratio))
-                and average_length <= 32
-            )
-        )
-    )
+    is_categorical = kind in {"categorical", "boolean"}
 
     return CategoricalColumnProfile(
         column_name=str(series.name or "unnamed"),
@@ -77,6 +70,9 @@ def analyze_categorical_column(
         frequencies={str(key): int(count) for key, count in values.value_counts().items()},
         is_hierarchical=hierarchy_separator is not None,
         hierarchy_separator=hierarchy_separator,
+        low_cardinality_numeric=bool(
+            kind == "numerical" and len(values) and ratio <= max_cardinality_ratio
+        ),
     )
 
 

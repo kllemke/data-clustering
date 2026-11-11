@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from .time_series import analyze_time_series_column
+from .column_types import classify_column
 
 
 @dataclass
@@ -36,7 +37,7 @@ def analyze_time_series_dataset(dataframe: pd.DataFrame) -> List[TimeSeriesDatas
     numeric_columns = [
         str(column)
         for column in dataframe.columns
-        if pd.api.types.is_numeric_dtype(dataframe[column])
+        if classify_column(dataframe[column]) == "numerical"
     ]
     profiles: List[TimeSeriesDatasetProfile] = []
 

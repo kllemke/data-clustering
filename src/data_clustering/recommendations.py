@@ -3,16 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Mapping
 
 import pandas as pd
-
-from .detection.categorical import analyze_categorical_column
-from .detection.multimedia import analyze_multimedia_references
-from .detection.text import analyze_text_column
-from .detection.time_series_dataset import analyze_time_series_dataset
-from .detection.numerical_uncertainty import analyze_uncertainty
-
 
 @dataclass
 class AlgorithmRecommendation:
@@ -24,29 +17,36 @@ class AlgorithmRecommendation:
         return asdict(self)
 
 
-def recommend_algorithms(dataframe: pd.DataFrame) -> List[AlgorithmRecommendation]:
-    """Suggest clustering approaches; recommendations do not train or run models."""
+def recommend_algorithms(
+    dataframe: pd.DataFrame | None = None, *, analysis: Mapping[str, Any] | None = None
+) -> List[AlgorithmRecommendation]:
+    """Suggest approaches from an existing analysis, or analyze a DataFrame once."""
+    if analysis is None:
+        if dataframe is None:
+            raise TypeError("Provide a DataFrame or an analysis report.")
+        # Import locally to keep the public DataFrame API without a circular import.
+        from .analysis import analyze_dataframe
+        return analyze_dataframe(dataframe).recommendations
+
     recommendations: List[AlgorithmRecommendation] = []
-    time_profiles = analyze_time_series_dataset(dataframe)
+    columns = analysis.get("columns", {})
+    time_profiles = analysis.get("time_series", [])
     text_columns = [
-        str(column)
-        for column in dataframe.columns
-        if (
-            (profile := analyze_text_column(dataframe[column])).is_text
-            and (profile.average_word_count >= 3 or profile.average_text_length >= 25)
-        )
+        name for name, profile in columns.items()
+        if profile.get("text", {}).get("is_text")
+        and (profile["text"]["average_word_count"] >= 3
+             or profile["text"]["average_text_length"] >= 25)
     ]
     numeric_columns = [
-        str(column) for column in dataframe.columns if pd.api.types.is_numeric_dtype(dataframe[column])
+        name for name, profile in columns.items() if profile["kind"] == "numerical"
     ]
     categorical_columns = [
-        str(column) for column in dataframe.columns if analyze_categorical_column(dataframe[column]).is_categorical
+        name for name, profile in columns.items()
+        if profile["kind"] in {"categorical", "boolean"}
+        and name not in text_columns and not profile.get("is_datetime")
+        and not profile.get("multimedia")
     ]
-    media_types = {
-        media_type
-        for column in dataframe.columns
-        for media_type in analyze_multimedia_references(dataframe[column]).file_type_counts
-    }
+    media_types = set((analysis.get("multimedia") or {}).get("file_type_counts", {}))
 
     if text_columns:
         recommendations.append(
@@ -60,7 +60,7 @@ def recommend_algorithms(dataframe: pd.DataFrame) -> List[AlgorithmRecommendatio
         predictability = [
             score
             for profile in time_profiles
-            for score in profile.predictability.values()
+            for score in profile["predictability"].values()
         ]
         rationale = f"Time-indexed numerical signals detected in {len(time_profiles)} time column(s)."
         if predictability:
@@ -96,8 +96,8 @@ def recommend_algorithms(dataframe: pd.DataFrame) -> List[AlgorithmRecommendatio
                 ["Extract embeddings using a modality-specific pretrained model", "Normalize embedding vectors"],
             )
         )
-    uncertainty = analyze_uncertainty(dataframe)
-    if uncertainty.confidence_score_columns or uncertainty.confidence_interval_pairs:
+    uncertainty = analysis.get("uncertainty", {})
+    if uncertainty.get("confidence_score_columns") or uncertainty.get("confidence_interval_pairs"):
         recommendations.append(
             AlgorithmRecommendation(
                 "Gaussian Mixture Model with uncertainty-aware review",

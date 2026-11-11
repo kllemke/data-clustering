@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
 import pandas as pd
+from .column_types import classify_column
 
 
 @dataclass
@@ -54,7 +55,7 @@ def _parse_datetime_values(series: pd.Series) -> pd.Series:
     if pd.api.types.is_datetime64_any_dtype(series):
         return pd.to_datetime(series, errors="coerce", utc=False)
 
-    if pd.api.types.is_numeric_dtype(series):
+    if classify_column(series) in {"numerical", "boolean"}:
         return pd.Series(pd.NaT, index=series.index, dtype="datetime64[ns]")
 
     parsed_values: List[pd.Timestamp | pd.NaT] = []

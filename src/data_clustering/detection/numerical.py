@@ -7,6 +7,8 @@ from typing import Any, Dict
 
 import pandas as pd
 
+from .column_types import classify_column
+
 
 @dataclass
 class NumericalColumnProfile:
@@ -26,11 +28,8 @@ class NumericalColumnProfile:
 
 def analyze_numerical_column(series: pd.Series) -> NumericalColumnProfile:
     """Compute basic distribution and missingness statistics for a column."""
-    numeric = (
-        pd.Series(dtype=float)
-        if pd.api.types.is_datetime64_any_dtype(series)
-        else pd.to_numeric(series, errors="coerce")
-    )
+    is_numeric = classify_column(series) == "numerical"
+    numeric = pd.to_numeric(series, errors="coerce") if is_numeric else pd.Series(dtype=float)
     valid = numeric.dropna()
     missing_ratio = float(series.isna().mean()) if len(series) else 0.0
 
@@ -41,7 +40,7 @@ def analyze_numerical_column(series: pd.Series) -> NumericalColumnProfile:
 
     return NumericalColumnProfile(
         column_name=str(series.name or "unnamed"),
-        is_numeric=bool(len(valid) > 0 and len(valid) / max(1, series.notna().sum()) >= 0.8),
+        is_numeric=is_numeric,
         count=int(len(valid)),
         missing_ratio=missing_ratio,
         mean=finite_or_none(valid.mean()),
