@@ -1,0 +1,2 @@
+[console_scripts]
+data-clustering = data_clustering.cli:main
