@@ -1,0 +1,77 @@
+{
+  "description": "Erwartete Empfehlungen für typische Datenprofile. expect_any: mindestens einer davon muss empfohlen werden. expect_none: keiner davon darf empfohlen werden. expect_avoid: diese Algorithmen müssen als Warnung erscheinen.",
+  "cases": [
+    {
+      "id": "T01",
+      "description": "Iris-ähnlich: wenige numerische Merkmale, kaum Ausreißer",
+      "profile": {"data_type": "numeric", "n_rows": 150, "n_features": 4, "outlier_ratio": 0.01},
+      "expect_status": "ok",
+      "expect_any": ["K-Means", "GMM"],
+      "expect_none": ["K-Modes", "K-Prototypes"]
+    },
+    {
+      "id": "T02",
+      "description": "Umfrage mit rein kategorialen Antworten",
+      "profile": {"data_type": "categorical", "n_rows": 500, "n_features": 12},
+      "expect_status": "ok",
+      "expect_any": ["K-Modes"],
+      "expect_none": ["K-Means", "GMM", "Agglomerative (Ward)"],
+      "expect_avoid": ["K-Means"]
+    },
+    {
+      "id": "T03",
+      "description": "Kundendaten mit numerischen und kategorialen Spalten",
+      "profile": {"data_type": "mixed", "n_rows": 1000, "n_features": 10},
+      "expect_status": "ok",
+      "expect_any": ["K-Prototypes", "Agglomerative (Gower)"],
+      "expect_none": ["K-Means"],
+      "expect_avoid": ["K-Means"]
+    },
+    {
+      "id": "T04",
+      "description": "Numerische Daten mit vielen Ausreißern",
+      "profile": {"data_type": "numeric", "n_rows": 5000, "n_features": 3, "outlier_ratio": 0.12},
+      "expect_status": "ok",
+      "expect_any": ["DBSCAN", "HDBSCAN"],
+      "expect_none": ["K-Means", "GMM", "Agglomerative (Ward)"],
+      "expect_avoid": ["K-Means"]
+    },
+    {
+      "id": "T05",
+      "description": "Zeitreihen, z. B. Stromverbrauch je Haushalt",
+      "profile": {"data_type": "time_series", "n_rows": 300, "n_features": 96},
+      "expect_status": "ok",
+      "expect_any": ["TimeSeriesKMeans (DTW)", "k-Shape", "DBSCAN", "SOM"],
+      "expect_none": ["K-Means", "K-Modes"]
+    },
+    {
+      "id": "T06",
+      "description": "Datenstrom, z. B. Sensordaten",
+      "profile": {"data_type": "stream"},
+      "expect_status": "ok",
+      "expect_any": ["CluStream", "DenStream"],
+      "expect_none": ["Agglomerative (Ward)"]
+    },
+    {
+      "id": "T07",
+      "description": "Sehr hochdimensional: DBSCAN muss gewarnt werden",
+      "profile": {"data_type": "numeric", "n_rows": 200, "n_features": 500, "outlier_ratio": 0.0},
+      "expect_status": "ok",
+      "expect_any": ["SOM"],
+      "expect_none": ["DBSCAN", "K-Means"],
+      "expect_avoid": ["DBSCAN"]
+    },
+    {
+      "id": "T08",
+      "description": "Fallback: nur 5 Zeilen, keine gesicherte Empfehlung",
+      "profile": {"data_type": "numeric", "n_rows": 5, "n_features": 3, "outlier_ratio": 0.0},
+      "expect_status": "uncertain"
+    },
+    {
+      "id": "T09",
+      "description": "Fallback: unbekannter Datentyp",
+      "profile": {"data_type": "graph", "n_rows": 1000},
+      "expect_status": "uncertain"
+    }
+  ]
+}

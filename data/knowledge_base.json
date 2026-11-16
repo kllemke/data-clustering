@@ -1,0 +1,307 @@
+{
+  "version": "0.1",
+  "description": "Regeln für Cluster-to-Purpose. verdict=recommend: Empfehlung, verdict=avoid: Warnung, warum ein Algorithmus nicht passt. paper_section: Abschnitt im Kurs-Paper, der die Regel belegt (vom Review-Team einzutragen).",
+  "rules": [
+    {
+      "id": "R01",
+      "algorithm": "K-Means",
+      "verdict": "recommend",
+      "data_types": ["numeric"],
+      "conditions": {"min_rows": 20, "max_features": 50, "max_outlier_ratio": 0.05},
+      "preconditions": ["Merkmale standardisieren (z. B. StandardScaler)"],
+      "rationale": "Schnell und gut interpretierbar bei numerischen Daten mit etwa kugelförmigen, ähnlich großen Clustern.",
+      "risks": [
+        "k muss vorab festgelegt werden (Elbow-Methode oder Silhouette)",
+        "Nimmt kugelförmige, ähnlich große Cluster an",
+        "Empfindlich gegenüber Ausreißern und unterschiedlicher Skalierung",
+        "Ergebnis hängt von der Initialisierung ab (k-means++ und mehrere Läufe nutzen)"
+      ],
+      "evaluation": ["silhouette", "davies_bouldin", "calinski_harabasz"],
+      "source": "MacQueen (1967)",
+      "paper_section": ""
+    },
+    {
+      "id": "R02",
+      "algorithm": "GMM",
+      "verdict": "recommend",
+      "data_types": ["numeric"],
+      "conditions": {"min_rows": 50, "max_features": 30, "max_outlier_ratio": 0.05},
+      "preconditions": ["Merkmale standardisieren"],
+      "rationale": "Modelliert elliptische Cluster und liefert weiche Zuordnungen (Wahrscheinlichkeiten je Cluster).",
+      "risks": [
+        "Anzahl der Komponenten muss gewählt werden (BIC oder AIC)",
+        "Kovarianzschätzung wird bei vielen Dimensionen instabil",
+        "Empfindlich gegenüber Ausreißern",
+        "EM kann in lokalen Optima enden"
+      ],
+      "evaluation": ["bic", "silhouette"],
+      "source": "Dempster, Laird & Rubin (1977)",
+      "paper_section": ""
+    },
+    {
+      "id": "R03",
+      "algorithm": "DBSCAN",
+      "verdict": "recommend",
+      "data_types": ["numeric"],
+      "conditions": {"min_rows": 50, "max_features": 20},
+      "preconditions": ["Merkmale standardisieren", "eps über k-Distanz-Plot bestimmen"],
+      "rationale": "Findet Cluster beliebiger Form, markiert Rauschen als eigene Gruppe und braucht keine vorgegebene Clusteranzahl.",
+      "risks": [
+        "Sehr empfindlich bei der Wahl von eps und minPts",
+        "Schwach bei Clustern unterschiedlicher Dichte",
+        "Distanzen verlieren bei vielen Dimensionen ihre Aussagekraft"
+      ],
+      "evaluation": ["dbcv", "noise_ratio"],
+      "source": "Ester, Kriegel, Sander & Xu (1996)",
+      "paper_section": ""
+    },
+    {
+      "id": "R04",
+      "algorithm": "HDBSCAN",
+      "verdict": "recommend",
+      "data_types": ["numeric"],
+      "conditions": {"min_rows": 100, "max_features": 50},
+      "preconditions": ["Merkmale standardisieren"],
+      "rationale": "Dichtebasiert wie DBSCAN, kommt aber mit unterschiedlichen Dichten zurecht und braucht kein eps.",
+      "risks": [
+        "min_cluster_size beeinflusst das Ergebnis stark",
+        "Kann viele Punkte als Rauschen markieren",
+        "Bei vielen Dimensionen ebenfalls schwächer"
+      ],
+      "evaluation": ["dbcv", "noise_ratio"],
+      "source": "Campello, Moulavi & Sander (2013)",
+      "paper_section": ""
+    },
+    {
+      "id": "R05",
+      "algorithm": "Agglomerative (Ward)",
+      "verdict": "recommend",
+      "data_types": ["numeric"],
+      "conditions": {"min_rows": 10, "max_rows": 10000, "max_features": 50, "max_outlier_ratio": 0.05},
+      "preconditions": ["Merkmale standardisieren"],
+      "rationale": "Hierarchisches Verfahren, das über ein Dendrogramm zeigt, wie Cluster zusammenwachsen. Gut für kleine Datensätze.",
+      "risks": [
+        "Speicherbedarf wächst quadratisch mit der Zeilenzahl",
+        "Ward funktioniert nur mit euklidischer Distanz",
+        "Schnitthöhe im Dendrogramm muss gewählt werden"
+      ],
+      "evaluation": ["silhouette", "cophenetic_correlation"],
+      "source": "Ward (1963)",
+      "paper_section": ""
+    },
+    {
+      "id": "R06",
+      "algorithm": "K-Modes",
+      "verdict": "recommend",
+      "data_types": ["categorical"],
+      "conditions": {"min_rows": 20},
+      "preconditions": [],
+      "rationale": "Ersetzt Mittelwerte durch Modi und nutzt eine Übereinstimmungs-Distanz, daher geeignet für rein kategoriale Daten.",
+      "risks": [
+        "k muss vorab festgelegt werden",
+        "Abhängig von der Initialisierung",
+        "Seltene Kategorien und sehr viele Ausprägungen verzerren das Ergebnis",
+        "Reihenfolge ordinaler Merkmale geht verloren"
+      ],
+      "evaluation": ["within_cluster_cost", "silhouette"],
+      "source": "Huang (1998)",
+      "paper_section": ""
+    },
+    {
+      "id": "R07",
+      "algorithm": "K-Prototypes",
+      "verdict": "recommend",
+      "data_types": ["mixed"],
+      "conditions": {"min_rows": 20},
+      "preconditions": ["Numerische Merkmale standardisieren"],
+      "rationale": "Kombiniert K-Means für numerische und K-Modes für kategoriale Merkmale in einem Verfahren.",
+      "risks": [
+        "Gewichtung gamma zwischen numerischem und kategorialem Teil muss gewählt werden",
+        "k muss vorab festgelegt werden",
+        "Erbt die Ausreißerempfindlichkeit von K-Means"
+      ],
+      "evaluation": ["within_cluster_cost", "silhouette"],
+      "source": "Huang (1997)",
+      "paper_section": ""
+    },
+    {
+      "id": "R08",
+      "algorithm": "Agglomerative (Gower)",
+      "verdict": "recommend",
+      "data_types": ["mixed", "categorical"],
+      "conditions": {"min_rows": 10, "max_rows": 10000},
+      "preconditions": ["Gower-Distanzmatrix berechnen"],
+      "rationale": "Hierarchisches Clustering auf der Gower-Distanz, die numerische und kategoriale Merkmale gemeinsam verarbeitet.",
+      "risks": [
+        "Speicherbedarf wächst quadratisch mit der Zeilenzahl",
+        "Wahl des Linkage-Verfahrens (average, complete) beeinflusst das Ergebnis"
+      ],
+      "evaluation": ["silhouette"],
+      "source": "Gower (1971)",
+      "paper_section": ""
+    },
+    {
+      "id": "R09",
+      "algorithm": "TimeSeriesKMeans (DTW)",
+      "verdict": "recommend",
+      "data_types": ["time_series"],
+      "conditions": {"min_rows": 20},
+      "preconditions": ["Jede Zeitreihe z-normalisieren", "Dynamic Time Warping (DTW) als Distanz nutzen"],
+      "rationale": "K-Means mit DTW-Distanz und DBA-Mittelwerten erkennt ähnliche Verläufe, auch wenn sie zeitlich verschoben sind.",
+      "risks": [
+        "DTW ist rechenintensiv bei langen Zeitreihen",
+        "k muss vorab festgelegt werden",
+        "Ohne Normalisierung dominiert das Niveau statt der Form"
+      ],
+      "evaluation": ["silhouette"],
+      "source": "Petitjean, Ketterlin & Gançarski (2011)",
+      "paper_section": ""
+    },
+    {
+      "id": "R10",
+      "algorithm": "k-Shape",
+      "verdict": "recommend",
+      "data_types": ["time_series"],
+      "conditions": {"min_rows": 20},
+      "preconditions": ["Jede Zeitreihe z-normalisieren", "Zeitreihen auf gleiche Länge bringen"],
+      "rationale": "Gruppiert Zeitreihen nach ihrer Form über eine Kreuzkorrelations-Distanz und ist schneller als DTW.",
+      "risks": [
+        "Vergleicht nur die Form, nicht das absolute Niveau",
+        "k muss vorab festgelegt werden"
+      ],
+      "evaluation": ["silhouette"],
+      "source": "Paparrizos & Gravano (2015)",
+      "paper_section": ""
+    },
+    {
+      "id": "R11",
+      "algorithm": "DBSCAN",
+      "verdict": "recommend",
+      "data_types": ["time_series"],
+      "conditions": {"min_rows": 50, "max_rows": 5000},
+      "preconditions": ["DTW-Distanzmatrix berechnen oder Merkmale extrahieren (z. B. mit tsfresh)"],
+      "rationale": "Findet Gruppen ähnlicher Zeitreihen und markiert untypische Verläufe als Rauschen, aber nur mit passender Distanz.",
+      "risks": [
+        "Auf rohen Zeitpunkten als Spalten liefert DBSCAN irreführende Ergebnisse",
+        "eps ist auf DTW-Distanzen schwer zu wählen",
+        "Distanzmatrix wächst quadratisch mit der Anzahl der Zeitreihen"
+      ],
+      "evaluation": ["dbcv", "noise_ratio"],
+      "source": "Ester, Kriegel, Sander & Xu (1996)",
+      "paper_section": ""
+    },
+    {
+      "id": "R12",
+      "algorithm": "SOM",
+      "verdict": "recommend",
+      "data_types": ["numeric", "time_series"],
+      "conditions": {"min_rows": 100},
+      "preconditions": ["Merkmale standardisieren", "Bei Zeitreihen: Merkmalsvektoren oder Sliding-Windows bilden"],
+      "rationale": "Selbstorganisierende Karte projiziert auch hochdimensionale Daten auf ein 2D-Gitter und macht Strukturen sichtbar.",
+      "risks": [
+        "Gittergröße und Lernrate müssen gewählt werden",
+        "Die Karte selbst ist noch keine Clusterzuordnung, oft braucht es einen zweiten Clustering-Schritt",
+        "Ergebnis schwerer zu interpretieren als bei K-Means"
+      ],
+      "evaluation": ["quantization_error", "topographic_error"],
+      "source": "Kohonen (1990)",
+      "paper_section": ""
+    },
+    {
+      "id": "R13",
+      "algorithm": "CluStream",
+      "verdict": "recommend",
+      "data_types": ["stream"],
+      "conditions": {},
+      "preconditions": ["Zeithorizont und Anzahl Micro-Cluster festlegen"],
+      "rationale": "Fasst den Datenstrom online in Micro-Clustern zusammen und clustert diese offline, ohne alle Daten zu speichern.",
+      "risks": [
+        "Offline-Schritt nutzt K-Means und findet daher eher kugelförmige Cluster",
+        "Anzahl der Micro-Cluster und Zeithorizont beeinflussen das Ergebnis"
+      ],
+      "evaluation": ["windowed_silhouette"],
+      "source": "Aggarwal, Han, Wang & Yu (2003)",
+      "paper_section": ""
+    },
+    {
+      "id": "R14",
+      "algorithm": "DenStream",
+      "verdict": "recommend",
+      "data_types": ["stream"],
+      "conditions": {},
+      "preconditions": ["Abklingfaktor lambda festlegen"],
+      "rationale": "Dichtebasiertes Stream-Clustering, findet Cluster beliebiger Form und behandelt Ausreißer im Strom.",
+      "risks": [
+        "Viele Parameter (eps, mu, beta, lambda)",
+        "Ergebnis reagiert empfindlich auf den Abklingfaktor"
+      ],
+      "evaluation": ["windowed_silhouette", "noise_ratio"],
+      "source": "Cao, Ester, Qian & Zhou (2006)",
+      "paper_section": ""
+    },
+    {
+      "id": "R15",
+      "algorithm": "Spherical K-Means",
+      "verdict": "recommend",
+      "data_types": ["text"],
+      "conditions": {"min_rows": 20},
+      "preconditions": ["Text in TF-IDF-Vektoren oder Embeddings umwandeln", "Vektoren auf Länge 1 normieren"],
+      "rationale": "K-Means mit Kosinus-Ähnlichkeit, passend für dünn besetzte, hochdimensionale Textvektoren.",
+      "risks": [
+        "Ergebnis hängt stark von der Textvorverarbeitung ab",
+        "k muss vorab festgelegt werden",
+        "Mehrdeutige Begriffe landen in falschen Clustern"
+      ],
+      "evaluation": ["silhouette"],
+      "source": "Dhillon & Modha (2001)",
+      "paper_section": ""
+    },
+    {
+      "id": "R16",
+      "algorithm": "UK-Means",
+      "verdict": "recommend",
+      "data_types": ["uncertain"],
+      "conditions": {"min_rows": 20},
+      "preconditions": ["Für jedes Objekt eine Wahrscheinlichkeitsverteilung oder Messunsicherheit angeben"],
+      "rationale": "Variante von K-Means, die mit erwarteten Distanzen über unsichere Messwerte rechnet.",
+      "risks": [
+        "Benötigt eine Unsicherheitsangabe je Objekt, die oft fehlt",
+        "Berechnung der erwarteten Distanzen ist aufwändig",
+        "Erbt die Annahmen von K-Means"
+      ],
+      "evaluation": ["silhouette"],
+      "source": "Chau, Cheng, Kao & Ng (2006)",
+      "paper_section": ""
+    },
+    {
+      "id": "A01",
+      "algorithm": "K-Means",
+      "verdict": "avoid",
+      "data_types": ["categorical", "mixed"],
+      "conditions": {},
+      "rationale": "Mittelwerte sind für Kategorien nicht definiert, und One-Hot-Kodierung verzerrt die Distanzen. Besser K-Modes oder K-Prototypes.",
+      "source": "Huang (1998)",
+      "paper_section": ""
+    },
+    {
+      "id": "A02",
+      "algorithm": "K-Means",
+      "verdict": "avoid",
+      "data_types": ["numeric"],
+      "conditions": {"min_outlier_ratio": 0.1},
+      "rationale": "Bei vielen Ausreißern verschieben sich die Mittelpunkte stark. Besser DBSCAN oder HDBSCAN.",
+      "source": "MacQueen (1967)",
+      "paper_section": ""
+    },
+    {
+      "id": "A03",
+      "algorithm": "DBSCAN",
+      "verdict": "avoid",
+      "data_types": ["numeric"],
+      "conditions": {"min_features": 50},
+      "rationale": "In sehr vielen Dimensionen werden Dichten und Distanzen bedeutungslos. Vorher Dimension reduzieren (z. B. PCA).",
+      "source": "Ester, Kriegel, Sander & Xu (1996)",
+      "paper_section": ""
+    }
+  ]
+}

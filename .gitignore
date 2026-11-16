@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Editor-Einstellungen bleiben lokal (VS Code und PyCharm)
+.vscode/
+.idea/
+
+# Betriebssystem
+.DS_Store
+Thumbs.db
